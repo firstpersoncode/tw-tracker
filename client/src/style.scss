@@ -1,0 +1,165 @@
+* {
+  box-sizing: border-box;
+  word-wrap: break-word;
+}
+
+body {
+  margin: 0px;
+  padding: 0px;
+}
+
+.main {
+  height: 100vh;
+}
+
+.mapWrapper {
+  height: 100%;
+  width: 100%;
+  position: absolute;
+}
+
+.fetch {
+  display: none;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  background: rgba(0,0,0,0.5);
+  pointer-events: none;
+  font-size: 30px;
+  text-align: center;
+  color: #fff;
+}
+
+.mapWrap {
+  width: 100%;
+  height: 100%;
+  &.wait {
+    .fetch {
+      display: block;
+    }
+  }
+}
+
+
+.map {
+  width: 100%;
+  height: 100%;
+}
+
+.wrapper {
+  width: 100%;
+  position: absolute;
+  z-index: 3;
+  bottom: 0;
+  left: 0;
+  padding: 15px;
+  display: flex;
+  overflow: hidden;
+  align-items: stretch;
+  transition: ease-out .4s;
+  height: 50%;
+  max-height: 800px;
+  // flex-grow: 1;
+  // flex-basis: content;
+  background: rgba(255,255,255,0.7);
+
+  &.fullHeight {
+    max-height: none;
+    height: 100vh;
+  }
+
+  &.hidePanel {
+    height: 50px;
+    > div {
+      display: none;
+    }
+  }
+
+  &:after {
+    content: "";
+    display: block;
+    clear: both;
+  }
+}
+
+.graph-container {
+  padding: 0 15px;
+  width: 50%;
+  // height: 50vh;
+  display: flex;
+  align-items: flex-end;
+  position: relative;
+  overflow: hidden;
+  > div {
+    width: 50%;
+  }
+
+  .first {
+    left: 0;
+    background: red;
+  }
+  .second {
+    right: 0;
+    background: blue;
+  }
+}
+
+.tweet-container {
+  padding: 0 15px;
+  width: 50%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.total-tweets {
+  display: none;
+}
+
+form {
+  #opt-first,
+  #opt-second,
+  #opt-limit {
+    font-size: 30px;
+  }
+}
+
+.wait {
+  form {
+    opacity: 0.2;
+    pointer-events: none;
+  }
+  .total-tweets {
+    display: block;
+  }
+}
+
+.tweet-list {
+  padding-left: 0;
+  list-style: none;
+  li {
+    margin: 10px 0;
+    > img {
+      width: 100%;
+    }
+  }
+}
+
+.opt-first {
+  padding: 5px;
+  background: #fff;
+}
+
+.opt-second {
+  padding: 5px;
+  background: #eee;
+}
+
+.wrapper-info {
+  max-width: 300px;
+}
+
+.gmnoprint {
+  bottom: auto !important;
+  top: 0;
+}

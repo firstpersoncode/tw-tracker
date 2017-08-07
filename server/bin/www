@@ -1,0 +1,196 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('socmedTracker:server');
+var http = require('http');
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || '7005');
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+
+var server = http.createServer(app);
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+var twitter = require('ntwitter');
+var io = require('socket.io').listen(server);
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = server.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}
+
+var twit = new twitter({
+  consumer_key: 'Az1txkSSyCTfhBFcmzXvXpwPA',
+  consumer_secret: 'UYpMUNW10qGNiNJzNg8fv4G77zubKBNaWc2hPHpGR1oGCHotju',
+  access_token_key: '829892066192691200-GZir3MhtX6FiDezXDKNRqvitHgjhH1o',
+  access_token_secret: '16QgR5aNVbFdCda8Pth1TXBrTPyqhLN15gyfGZVYriFkl'
+});
+
+// verify credential
+twit
+.verifyCredentials(function (err, data) {
+  if(err) throw err;
+  console.log("credential is perfect !");
+});
+
+// initial data for percentage
+var optFirst = 0;
+var optSecond = 0;
+var total = 0;
+
+
+// start connection
+io.sockets.on('connection', (socket) => {
+
+
+  // start streaming to client
+  socket.on('stream', (data, cb) => {
+
+    // reset the percentage
+    optFirst = 0;
+    optSecond = 0;
+    total = 0;
+
+    socket.optFirst = data.optFirst;
+    socket.optSecond = data.optSecond;
+
+    twit.stream('statuses/filter', { track: [socket.optFirst, socket.optSecond] }, (stream) => {
+
+      socket.optFirstPercent = optFirst;
+      socket.optSecondPercent = optSecond;
+
+      stream.on('data', (tweet) => {
+        // percentage
+        var text = tweet.text.toLowerCase();
+
+        if(text.indexOf(socket.optFirst) !== -1) {
+          socket.optFirstPercent ++;
+          total ++;
+        }
+
+        if(text.indexOf(socket.optSecond) !== -1) {
+          socket.optSecondPercent ++;
+          total ++;
+        }
+
+        console.log(tweet.entities);
+
+        // send tweet to client
+        socket.emit('tweet', {
+          date: tweet.created_at,
+          user: tweet.user.name,
+          username: tweet.user.screen_name,
+          text: tweet.text,
+          hashtags: tweet.entities.hashtags,
+          entities: tweet.entities,
+          profpic: tweet.user.profile_image_url,
+          optFirst: (socket.optFirstPercent/total) * 100,
+          optSecond: (socket.optSecondPercent/total) * 100,
+          geo: tweet.geo,
+          coordinate: tweet.coordinates,
+        });
+
+        if (tweet.geo || tweet.coordinates) {
+          socket.emit('tweet coordinates', {
+            date: tweet.created_at,
+            profpic: tweet.user.profile_image_url,
+            user: tweet.user.name,
+            username: tweet.user.screen_name,
+            text: tweet.text,
+            hashtags: tweet.entities.hashtags,
+            entities: tweet.entities,
+            geo: tweet.geo,
+            coordinate: tweet.coordinates,
+          });
+        }
+
+        // destroy streaming when tweet list reach limit
+        if (total >= data.optLimit) {
+          cb(true);
+          stream.destroy();
+        }
+
+        socket.on('end stream', () => {
+          stream.destroy();
+        });
+
+      }); // end receiving data
+
+    }); // end twitter stream
+
+  }); // end socket streaming to client
+
+
+});
